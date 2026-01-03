@@ -1,0 +1,40 @@
+# CMake build directories
+cmake-build-*/
+build/
+out/
+
+Moon_Diff_16K.png
+
+# IDE - CLion / IntelliJ
+.idea/
+
+# Compiler outputs
+*.exe
+*.out
+*.app
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+*.a
+*.lib
+
+# OS specific
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.sln.docstates
+*.vcxproj.user
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+Makefile
