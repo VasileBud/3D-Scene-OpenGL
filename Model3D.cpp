@@ -1,5 +1,9 @@
 #include "Model3D.hpp"
 
+#include <algorithm>
+#include <cmath>
+#include <limits>
+
 namespace gps {
 
 	void Model3D::LoadModel(std::string fileName) {
@@ -46,6 +50,9 @@ namespace gps {
 		std::cout << "# of shapes    : " << shapes.size() << std::endl;
 		std::cout << "# of materials : " << materials.size() << std::endl;
 
+        glm::vec3 minBounds(std::numeric_limits<float>::max());
+        glm::vec3 maxBounds(std::numeric_limits<float>::lowest());
+
 		// Loop over shapes
 		for (size_t s = 0; s < shapes.size(); s++) {
 
@@ -91,6 +98,9 @@ namespace gps {
 					currentVertex.Position = vertexPosition;
 					currentVertex.Normal = vertexNormal;
 					currentVertex.TexCoords = vertexTexCoords;
+
+                    minBounds = glm::min(minBounds, vertexPosition);
+                    maxBounds = glm::max(maxBounds, vertexPosition);
 
 					vertices.push_back(currentVertex);
 
@@ -148,7 +158,141 @@ namespace gps {
 
 			meshes.push_back(gps::Mesh(vertices, indices, textures));
 		}
+
+        modelBounds.min = minBounds;
+        modelBounds.max = maxBounds;
+        boundsValid = true;
+
+        const float normalThreshold = 0.6f;
+        walkTriangles.clear();
+
+        for (const auto& mesh : meshes)
+        {
+            for (size_t i = 0; i + 2 < mesh.indices.size(); i += 3)
+            {
+                const glm::vec3 v0 = mesh.vertices[mesh.indices[i]].Position;
+                const glm::vec3 v1 = mesh.vertices[mesh.indices[i + 1]].Position;
+                const glm::vec3 v2 = mesh.vertices[mesh.indices[i + 2]].Position;
+
+                const glm::vec3 n = glm::normalize(glm::cross(v1 - v0, v2 - v0));
+                if (n.y < normalThreshold)
+                {
+                    continue;
+                }
+
+                walkTriangles.push_back({v0, v1, v2});
+            }
+        }
+
+        walkGridOrigin = glm::vec2(modelBounds.min.x, modelBounds.min.z);
+        walkGridWidth = static_cast<int>(std::ceil((modelBounds.max.x - modelBounds.min.x) / walkCellSize)) + 1;
+        walkGridHeight = static_cast<int>(std::ceil((modelBounds.max.z - modelBounds.min.z) / walkCellSize)) + 1;
+        walkGrid.assign(walkGridWidth * walkGridHeight, {});
+
+        for (size_t t = 0; t < walkTriangles.size(); ++t)
+        {
+            const auto& tri = walkTriangles[t];
+            const float minX = std::min({tri.v0.x, tri.v1.x, tri.v2.x});
+            const float maxX = std::max({tri.v0.x, tri.v1.x, tri.v2.x});
+            const float minZ = std::min({tri.v0.z, tri.v1.z, tri.v2.z});
+            const float maxZ = std::max({tri.v0.z, tri.v1.z, tri.v2.z});
+
+            int ix0 = static_cast<int>(std::floor((minX - walkGridOrigin.x) / walkCellSize));
+            int ix1 = static_cast<int>(std::floor((maxX - walkGridOrigin.x) / walkCellSize));
+            int iz0 = static_cast<int>(std::floor((minZ - walkGridOrigin.y) / walkCellSize));
+            int iz1 = static_cast<int>(std::floor((maxZ - walkGridOrigin.y) / walkCellSize));
+
+            ix0 = std::clamp(ix0, 0, walkGridWidth - 1);
+            ix1 = std::clamp(ix1, 0, walkGridWidth - 1);
+            iz0 = std::clamp(iz0, 0, walkGridHeight - 1);
+            iz1 = std::clamp(iz1, 0, walkGridHeight - 1);
+
+            for (int iz = iz0; iz <= iz1; ++iz)
+            {
+                for (int ix = ix0; ix <= ix1; ++ix)
+                {
+                    walkGrid[iz * walkGridWidth + ix].push_back(static_cast<int>(t));
+                }
+            }
+        }
+
+        walkGridValid = true;
+
 	}
+
+    bool Model3D::getHeightAt(float x, float z, float currentY, float& outHeight) const
+    {
+        if (!walkGridValid || walkGridWidth == 0 || walkGridHeight == 0)
+        {
+            return false;
+        }
+
+        int ix = static_cast<int>(std::floor((x - walkGridOrigin.x) / walkCellSize));
+        int iz = static_cast<int>(std::floor((z - walkGridOrigin.y) / walkCellSize));
+
+        if (ix < 0 || ix >= walkGridWidth || iz < 0 || iz >= walkGridHeight)
+        {
+            return false;
+        }
+
+        const float eps = 1e-4f;
+        float bestDiff = std::numeric_limits<float>::max();
+        bool found = false;
+
+        for (int dz = -1; dz <= 1; ++dz)
+        {
+            for (int dx = -1; dx <= 1; ++dx)
+            {
+                int cx = ix + dx;
+                int cz = iz + dz;
+                if (cx < 0 || cx >= walkGridWidth || cz < 0 || cz >= walkGridHeight)
+                {
+                    continue;
+                }
+
+                const auto& cell = walkGrid[cz * walkGridWidth + cx];
+                for (int triIndex : cell)
+                {
+                    const auto& tri = walkTriangles[triIndex];
+                    const glm::vec2 a(tri.v0.x, tri.v0.z);
+                    const glm::vec2 b(tri.v1.x, tri.v1.z);
+                    const glm::vec2 c(tri.v2.x, tri.v2.z);
+                    const glm::vec2 p(x, z);
+
+                    const glm::vec2 v0 = b - a;
+                    const glm::vec2 v1 = c - a;
+                    const glm::vec2 v2 = p - a;
+
+                    float denom = v0.x * v1.y - v1.x * v0.y;
+                    if (std::abs(denom) < eps)
+                    {
+                        continue;
+                    }
+
+                    float v = (v2.x * v1.y - v1.x * v2.y) / denom;
+                    float w = (v0.x * v2.y - v2.x * v0.y) / denom;
+                    float u = 1.0f - v - w;
+
+                    if (u < -eps || v < -eps || w < -eps)
+                    {
+                        continue;
+                    }
+
+                    float y = u * tri.v0.y + v * tri.v1.y + w * tri.v2.y;
+                    float diff = std::abs(y - currentY);
+                    if (diff < bestDiff)
+                    {
+                        bestDiff = diff;
+                        outHeight = y;
+                        found = true;
+                    }
+                }
+            }
+        }
+
+        return found;
+    }
+
 
 	// Retrieves a texture associated with the object - by its name and type
 	gps::Texture Model3D::LoadTexture(std::string path, std::string type) {

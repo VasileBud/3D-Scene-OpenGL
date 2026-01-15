@@ -93,9 +93,9 @@ GLint lampPos1Loc, lampColor1Loc;
 GLint lampPos2Loc, lampColor2Loc;
 
 const glm::vec3 shipWorldTranslation(10000.0f, 100.0f, -10000.0f);
-const float shipWorldScale = 70.0f;
+const float shipWorldScale = 90.0f;
 const glm::vec3 shipSpawnLocal = 0.5f * (lampPos1 + lampPos2);
-const glm::vec3 shipLookLocal = shipSpawnLocal + glm::vec3(0.0f, 0.0f, -10.0f);
+const glm::vec3 shipLookLocal = shipSpawnLocal + glm::vec3(-20.0f, 0.0f, -10.0f);
 const glm::vec3 shipSpawnWorld = shipWorldTranslation + shipWorldScale * shipSpawnLocal;
 const glm::vec3 shipLookWorld = shipWorldTranslation + shipWorldScale * shipLookLocal;
 
@@ -129,6 +129,11 @@ gps::Model3D ocean;
 gps::Model3D moon;
 gps::Model3D ship;
 gps::SkyBox mySkyBox;
+gps::Model3D::AABB shipBoundsLocal;
+
+const float shipWalkMargin = 1.5f;
+float shipEyeHeightLocal = 1.7f;
+float shipFloorDefaultLocal = 0.0f;
 
 GLfloat angle;
 
@@ -208,6 +213,105 @@ void applyRenderMode()
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         break;
     }
+}
+
+void updateViewUniforms()
+{
+    view = myCamera.getViewMatrix();
+    myBasicShader.useShaderProgram();
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+    normalMatrix = glm::mat3(glm::inverseTranspose(view * model));
+    oceanShader.useShaderProgram();
+    glUniformMatrix4fv(oceanViewLoc, 1, GL_FALSE, glm::value_ptr(view));
+}
+
+glm::vec3 findFreeSpawnLocal()
+{
+    glm::vec3 minB = shipBoundsLocal.min + glm::vec3(shipWalkMargin, 0.0f, shipWalkMargin);
+    glm::vec3 maxB = shipBoundsLocal.max - glm::vec3(shipWalkMargin, 0.0f, shipWalkMargin);
+
+    auto tryPosition = [&](float x, float z, glm::vec3& outLocal) -> bool
+    {
+        if (x < minB.x || x > maxB.x || z < minB.z || z > maxB.z)
+        {
+            return false;
+        }
+
+        float floorHeight = 0.0f;
+        if (!ship.getHeightAt(x, z, shipSpawnLocal.y, floorHeight))
+        {
+            return false;
+        }
+
+        outLocal = glm::vec3(x, floorHeight + shipEyeHeightLocal, z);
+        return true;
+    };
+
+    glm::vec3 result;
+    const float baseX = 0.5f * (shipBoundsLocal.min.x + shipBoundsLocal.max.x);
+    const float baseZ = 0.5f * (shipBoundsLocal.min.z + shipBoundsLocal.max.z);
+
+    if (tryPosition(baseX, baseZ, result))
+    {
+        return result;
+    }
+
+    const float step = 1.0f;
+    const int maxRing = 25;
+    for (int r = 1; r <= maxRing; ++r)
+    {
+        for (int dx = -r; dx <= r; ++dx)
+        {
+            if (tryPosition(baseX + dx * step, baseZ + r * step, result) ||
+                tryPosition(baseX + dx * step, baseZ - r * step, result))
+            {
+                return result;
+            }
+        }
+
+        for (int dz = -r + 1; dz <= r - 1; ++dz)
+        {
+            if (tryPosition(baseX + r * step, baseZ + dz * step, result) ||
+                tryPosition(baseX - r * step, baseZ + dz * step, result))
+            {
+                return result;
+            }
+        }
+    }
+
+    return glm::vec3(shipSpawnLocal.x, shipSpawnLocal.y, shipSpawnLocal.z);
+}
+
+void placeCameraOnShip()
+{
+    glm::vec3 localPos = findFreeSpawnLocal();
+    glm::vec3 worldPos = glm::vec3(shipModelMatrix * glm::vec4(localPos, 1.0f));
+    myCamera.setPosition(worldPos);
+    updateViewUniforms();
+}
+
+void clampCameraToShip(const glm::vec3& prevWorldPos)
+{
+    glm::vec3 pos = myCamera.getPosition();
+    glm::mat4 invShip = glm::inverse(shipModelMatrix);
+    glm::vec3 localPos = glm::vec3(invShip * glm::vec4(pos, 1.0f));
+
+    glm::vec3 minB = shipBoundsLocal.min + glm::vec3(shipWalkMargin, 0.0f, shipWalkMargin);
+    glm::vec3 maxB = shipBoundsLocal.max - glm::vec3(shipWalkMargin, 0.0f, shipWalkMargin);
+
+    localPos.x = glm::clamp(localPos.x, minB.x, maxB.x);
+    localPos.z = glm::clamp(localPos.z, minB.z, maxB.z);
+    float floorHeight = 0.0f;
+    if (!ship.getHeightAt(localPos.x, localPos.z, localPos.y, floorHeight))
+    {
+        myCamera.setPosition(prevWorldPos);
+        return;
+    }
+
+    localPos.y = floorHeight + shipEyeHeightLocal;
+
+    glm::vec3 clampedWorld = glm::vec3(shipModelMatrix * glm::vec4(localPos, 1.0f));
+    myCamera.setPosition(clampedWorld);
 }
 
 glm::mat4 computeLightSpaceTrMatrix()
@@ -326,72 +430,41 @@ void mouseCallback(GLFWwindow* window, double xpos, double ypos)
     if (cameraPitch > 89.0f) cameraPitch = 89.0f;
     if (cameraPitch < -89.0f) cameraPitch = -89.0f;
     myCamera.rotate(cameraYaw, cameraPitch);
-
-    view = myCamera.getViewMatrix();
-    myBasicShader.useShaderProgram();
-    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-    normalMatrix = glm::mat3(glm::inverseTranspose(view * model));
-    // update view matrix for ocean shader
-    oceanShader.useShaderProgram();
-    glUniformMatrix4fv(oceanViewLoc, 1, GL_FALSE, glm::value_ptr(view));
+    updateViewUniforms();
 }
 
 void processMovement()
 {
+    bool moved = false;
+    glm::vec3 prevPos = myCamera.getPosition();
     if (pressedKeys[GLFW_KEY_W])
     {
         myCamera.move(gps::MOVE_FORWARD, cameraSpeed);
-        //update view matrix
-        view = myCamera.getViewMatrix();
-        myBasicShader.useShaderProgram();
-        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-        // compute normal matrix for teapot
-        normalMatrix = glm::mat3(glm::inverseTranspose(view * model));
-        // update view matrix for ocean shader
-        oceanShader.useShaderProgram();
-        glUniformMatrix4fv(oceanViewLoc, 1, GL_FALSE, glm::value_ptr(view));
+        moved = true;
     }
 
     if (pressedKeys[GLFW_KEY_S])
     {
         myCamera.move(gps::MOVE_BACKWARD, cameraSpeed);
-        //update view matrix
-        view = myCamera.getViewMatrix();
-        myBasicShader.useShaderProgram();
-        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-        // compute normal matrix for teapot
-        normalMatrix = glm::mat3(glm::inverseTranspose(view * model));
-        // update view matrix for ocean shader
-        oceanShader.useShaderProgram();
-        glUniformMatrix4fv(oceanViewLoc, 1, GL_FALSE, glm::value_ptr(view));
+        moved = true;
     }
 
     if (pressedKeys[GLFW_KEY_A])
     {
         myCamera.move(gps::MOVE_LEFT, cameraSpeed);
-        //update view matrix
-        view = myCamera.getViewMatrix();
-        myBasicShader.useShaderProgram();
-        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-        // compute normal matrix for teapot
-        normalMatrix = glm::mat3(glm::inverseTranspose(view * model));
-        // update view matrix for ocean shader
-        oceanShader.useShaderProgram();
-        glUniformMatrix4fv(oceanViewLoc, 1, GL_FALSE, glm::value_ptr(view));
+        moved = true;
     }
 
     if (pressedKeys[GLFW_KEY_D])
     {
         myCamera.move(gps::MOVE_RIGHT, cameraSpeed);
-        //update view matrix
-        view = myCamera.getViewMatrix();
-        myBasicShader.useShaderProgram();
-        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-        // compute normal matrix for teapot
-        normalMatrix = glm::mat3(glm::inverseTranspose(view * model));
-        // update view matrix for ocean shader
-        oceanShader.useShaderProgram();
-        glUniformMatrix4fv(oceanViewLoc, 1, GL_FALSE, glm::value_ptr(view));
+        moved = true;
+    }
+
+    if (moved)
+    {
+        clampCameraToShip(prevPos);
+        updateViewUniforms();
     }
 
     if (pressedKeys[GLFW_KEY_Q])
@@ -445,6 +518,21 @@ void initModels()
     ocean.LoadModel("models/ocean/ocean.obj");
     moon.LoadModel("models/moon/moon.obj");
     ship.LoadModel("models/ship/ship_v1_03.obj");
+    shipBoundsLocal = ship.getBounds();
+    float spawnFloor = shipBoundsLocal.min.y;
+    if (ship.getHeightAt(shipSpawnLocal.x, shipSpawnLocal.z, shipSpawnLocal.y, spawnFloor))
+    {
+        shipFloorDefaultLocal = spawnFloor;
+    }
+    else
+    {
+        shipFloorDefaultLocal = shipBoundsLocal.min.y;
+    }
+    shipEyeHeightLocal = shipSpawnLocal.y - shipFloorDefaultLocal;
+    if (shipEyeHeightLocal < 0.5f)
+    {
+        shipEyeHeightLocal = 1.7f;
+    }
 }
 
 void initShaders()
@@ -785,6 +873,7 @@ int main(int argc, const char* argv[])
     initShaders();
     initSkybox();
     initUniforms();
+    placeCameraOnShip();
     setWindowCallbacks();
 
     // application loop

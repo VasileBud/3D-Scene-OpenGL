@@ -15,6 +15,11 @@ namespace gps {
     class Model3D {
 
     public:
+        struct AABB {
+            glm::vec3 min;
+            glm::vec3 max;
+        };
+
         ~Model3D();
 
 		void LoadModel(std::string fileName);
@@ -23,11 +28,29 @@ namespace gps {
 
 		void Draw(gps::Shader shaderProgram);
 
+        AABB getBounds() const { return modelBounds; }
+        bool getHeightAt(float x, float z, float currentY, float& outHeight) const;
+
     private:
 		// Component meshes - group of objects
         std::vector<gps::Mesh> meshes;
 		// Associated textures
         std::vector<gps::Texture> loadedTextures;
+        AABB modelBounds{};
+        bool boundsValid = false;
+        struct WalkTriangle {
+            glm::vec3 v0;
+            glm::vec3 v1;
+            glm::vec3 v2;
+        };
+
+        float walkCellSize = 0.5f;
+        int walkGridWidth = 0;
+        int walkGridHeight = 0;
+        glm::vec2 walkGridOrigin{};
+        std::vector<WalkTriangle> walkTriangles;
+        std::vector<std::vector<int>> walkGrid;
+        bool walkGridValid = false;
 
 		// Does the parsing of the .obj file and fills in the data structure
 		void ReadOBJ(std::string fileName, std::string basePath);

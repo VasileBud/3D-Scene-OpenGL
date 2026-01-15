@@ -80,7 +80,7 @@ vec3 computePointLight(vec3 lampPosWorld, vec3 lampColor, vec3 fPosEye, vec3 nor
 
     // attenuation: con mic, dar fara sa dispara complet; distante scenei sunt mari
     float dist = length(lampPosEye - fPosEye);
-    float att = 1.0 / (1.0 + 0.035 * dist + 0.0030 * dist * dist);
+    float att = 1.0 / (1.0 + 0.025 * dist +  0.0015 * dist * dist);
 
     vec3 amb = 0.22 * lampColor;
     vec3 dif = diff * lampColor;
