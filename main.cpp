@@ -88,11 +88,18 @@ glm::vec3 lampPos2(-2.6f, 9.9f, -30.1f);
 GLint lampPos1Loc, lampColor1Loc;
 GLint lampPos2Loc, lampColor2Loc;
 
+const glm::vec3 shipWorldTranslation(10000.0f, 100.0f, -10000.0f);
+const float shipWorldScale = 70.0f;
+const glm::vec3 shipSpawnLocal = 0.5f * (lampPos1 + lampPos2);
+const glm::vec3 shipLookLocal = shipSpawnLocal + glm::vec3(0.0f, 0.0f, -10.0f);
+const glm::vec3 shipSpawnWorld = shipWorldTranslation + shipWorldScale * shipSpawnLocal;
+const glm::vec3 shipLookWorld = shipWorldTranslation + shipWorldScale * shipLookLocal;
+
 // camera
 gps::Camera myCamera(
     // pornim camera direct pe corabie
-    glm::vec3(2000.0f, 80.0f, -4800.0f),
-    glm::vec3(2000.0f, 70.0f, -5000.0f),
+    shipSpawnWorld,
+    shipLookWorld,
     glm::vec3(0.0f, 1.0f, 0.0f));
 
 GLfloat cameraSpeed = 50.0f;
@@ -102,6 +109,9 @@ float oceanFrequency = 0.7f;
 float oceanSpeed = 2.6f;
 
 GLboolean pressedKeys[1024];
+
+enum RenderMode { RENDER_SOLID = 0, RENDER_WIREFRAME, RENDER_POLYGONAL, RENDER_SMOOTH };
+RenderMode currentRenderMode = RENDER_SOLID;
 
 // models
 gps::Model3D teapot;
@@ -149,6 +159,46 @@ GLenum glCheckError_(const char* file, int line)
 
 #define glCheckError() glCheckError_(__FILE__, __LINE__)
 
+void applyRenderMode()
+{
+    switch (currentRenderMode)
+    {
+    case RENDER_SOLID:
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glDisable(GL_LINE_SMOOTH);
+        glDisable(GL_POINT_SMOOTH);
+        glDisable(GL_POLYGON_SMOOTH);
+        glDisable(GL_BLEND);
+        break;
+    case RENDER_WIREFRAME:
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        glDisable(GL_POINT_SMOOTH);
+        glDisable(GL_POLYGON_SMOOTH);
+        glEnable(GL_LINE_SMOOTH);
+        glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+        glLineWidth(1.5f);
+        glDisable(GL_BLEND);
+        break;
+    case RENDER_POLYGONAL:
+        glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+        glDisable(GL_LINE_SMOOTH);
+        glDisable(GL_POLYGON_SMOOTH);
+        glEnable(GL_POINT_SMOOTH);
+        glPointSize(3.0f);
+        glDisable(GL_BLEND);
+        break;
+    case RENDER_SMOOTH:
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glDisable(GL_LINE_SMOOTH);
+        glDisable(GL_POINT_SMOOTH);
+        glEnable(GL_POLYGON_SMOOTH);
+        glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        break;
+    }
+}
+
 void windowResizeCallback(GLFWwindow* window, int width, int height)
 {
     fprintf(stdout, "Window resized! New width: %d , and height: %d\n", width, height);
@@ -182,6 +232,12 @@ void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
         {
             pressedKeys[key] = false;
         }
+    }
+
+    if (key == GLFW_KEY_M && action == GLFW_PRESS)
+    {
+        currentRenderMode = static_cast<RenderMode>((currentRenderMode + 1) % 4);
+        applyRenderMode();
     }
 }
 
@@ -334,6 +390,7 @@ void initOpenGLState()
     glEnable(GL_CULL_FACE); // cull face
     glCullFace(GL_BACK); // cull back face
     glFrontFace(GL_CCW); // GL_CCW for counter clock-wise
+    applyRenderMode();
 }
 
 void initModels()
@@ -500,8 +557,8 @@ void initUniforms()
 
     // ship transform is static; precompute and send lamp positions/colors once
     shipModelMatrix = glm::mat4(1.0f);
-    shipModelMatrix = glm::translate(shipModelMatrix, glm::vec3(10000.0f, 100.0f, -10000.0f));
-    shipModelMatrix = glm::scale(shipModelMatrix, glm::vec3(70.f));
+    shipModelMatrix = glm::translate(shipModelMatrix, shipWorldTranslation);
+    shipModelMatrix = glm::scale(shipModelMatrix, glm::vec3(shipWorldScale));
 
     lampWorld1 = glm::vec3(shipModelMatrix * glm::vec4(lampPos1, 1.0f));
     lampWorld2 = glm::vec3(shipModelMatrix * glm::vec4(lampPos2, 1.0f));
