@@ -1,0 +1,462 @@
+# Blender 5.0.0 MTL File: 'ship_v1_03.blend'
+# www.blender.org
+
+newmtl Jibs
+Ns 87.293365
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd textures/Velatura_fiocchi_diff.jpg
+map_bump -bm 1.000000 textures/Velatura_fiocchi_normal.jpg
+
+newmtl Masts
+Ns 200.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.786364 0.786364 0.786364
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd textures/WoodMahoganyHonduranLarge001_COL_3K.jpg
+map_bump -bm 1.000000 textures/WoodMahoganyHonduranLarge001_NRM_3K.jpg
+
+newmtl MastsBlack
+Ns 200.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.209091 0.209091 0.209091
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd textures/WoodMahoganyHonduranLarge001_COL_3K.jpg
+map_bump -bm 1.000000 textures/WoodMahoganyHonduranLarge001_NRM_3K.jpg
+
+newmtl MastsBlack.001
+Ns 200.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.000000 0.000000 0.000000
+Ks 0.209091 0.209091 0.209091
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd textures/WoodFlooringWorn010_ALBEDO_blackDirt2.jpg
+map_bump -bm 1.000000 textures/WoodFlooringWorn010_normalDirt.jpg
+
+newmtl Mat.2
+Ka 0.568182 0.568182 0.568182
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 1
+map_Kd textures/timoneV3_Base_Color.PNG
+map_Ns textures/timoneV3_Roughness.PNG
+map_Ks textures/metal.png
+map_bump -bm 1.000000 textures/timoneV3_Normal_DirectX.PNG
+
+newmtl Planks
+Ka 0.054545 0.054545 0.054545
+Kd 0.800000 0.800000 0.800000
+Ks 0.181818 0.181818 0.181818
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+map_Kd textures/DeckWoodPlanks_albedo.jpg
+map_Ns textures/DeckWoodPlanks_rough.jpg
+map_bump -bm 1.000000 textures/WoodFlooringWorn010_NRM_3K.jpg
+
+newmtl Sail
+Ns 87.293365
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd textures/Velatura_trinchetto_diff.jpg
+map_bump -bm 1.000000 textures/Velatura_trinchetto_normal.jpg
+
+newmtl SailClothGeneric
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.274475 0.242716 0.183584
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd textures/Velatura_trinchetto_diff.jpg
+map_bump -bm 1.000000 textures/Velatura_trinchetto_bump.jpg
+
+newmtl Stern
+Ns 225.137299
+Ka 0.654545 0.654545 0.654545
+Kd 0.366453 0.124542 0.021630
+Ks 0.409091 0.409091 0.409091
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+map_Kd textures/cabina_Albedo.png
+map_bump -bm 1.000000 textures/cabina_normal_map.png
+
+newmtl blackPlanks
+Ka 0.140909 0.140909 0.140909
+Kd 0.800000 0.800000 0.800000
+Ks 0.231818 0.231818 0.231818
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+map_Kd textures/DeckWoodPlanks_albedo.jpg
+map_Ns textures/DeckWoodPlanks_rough.jpg
+map_bump -bm 1.000000 textures/WoodFlooringWorn010_normalDirt.jpg
+
+newmtl blackPlanksDirt
+Ns 200.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd textures/WoodFlooringWorn010_ALBEDO_blackDirt2.jpg
+map_Ns textures/DeckWoodPlanks_rough.jpg
+map_bump -bm 1.000000 textures/WoodFlooringWorn010_normalDirt.jpg
+
+newmtl coloredWood
+Ka 0.113636 0.113636 0.113636
+Kd 0.800000 0.800000 0.800000
+Ks 0.213636 0.213636 0.213636
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+map_Kd textures/DeckWoodPlanks_albedo.jpg
+map_Ns textures/DeckWoodPlanks_rough.jpg
+map_bump -bm 1.000000 textures/WoodFlooringWorn010_NRM_3K.jpg
+
+newmtl coloredWood2
+Ka 0.113636 0.113636 0.113636
+Kd 0.800000 0.800000 0.800000
+Ks 0.213636 0.213636 0.213636
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+map_Kd textures/DeckWoodPlanks_albedo.jpg
+map_Ns textures/DeckWoodPlanks_rough.jpg
+map_bump -bm 1.000000 textures/WoodFlooringWorn010_NRM_3K.jpg
+
+newmtl deck
+Ka 0.054545 0.054545 0.054545
+Ks 0.181818 0.181818 0.181818
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+map_Kd textures/DeckWoodPlanks_albedo.jpg
+map_Ns textures/DeckWoodPlanks_rough.jpg
+map_bump -bm 1.000000 textures/WoodFlooringWorn010_NRM_3K.jpg
+
+newmtl exteriorWood
+Ns 585.830139
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd textures/ExteriorWood_albedo.jpg
+map_Ns textures/ExteriorWood_rough.jpg
+map_bump -bm 1.000000 textures/WoodFlooringWorn010_NRM_3K.jpg
+
+newmtl exteriorWood.001
+Ns 585.830139
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd textures/ExteriorWood_albedo.jpg
+map_Ns textures/ExteriorWood_rough.jpg
+map_bump -bm 1.000000 textures/WoodFlooringWorn010_NRM_3K.jpg
+
+newmtl exteriorWoodBlack
+Ns 585.830139
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.245455 0.245455 0.245455
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd textures/DeckWoodPlanks_albedo.jpg
+map_Ns textures/DeckWoodPlanks_rough.jpg
+map_bump -bm 1.000000 textures/WoodFlooringWorn010_NRM_3K.jpg
+
+newmtl exteriorWoodBlack.001
+Ns 585.830139
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd textures/ExteriorWood_albedo.jpg
+map_Ns textures/ExteriorWood_rough.jpg
+map_bump -bm 1.000000 textures/WoodFlooringWorn010_NRM_3K.jpg
+
+
+newmtl flag
+Ns 18.595039
+Ka 1.000000 1.000000 1.000000
+Kd 0.288296 0.028674 0.004865
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd textures/Velatura_randa_diff.jpg
+map_bump -bm 1.000000 textures/Velatura_randa_normal.jpg
+
+newmtl glass
+Ns 200.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+
+newmtl glass2
+Ns 200.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+
+newmtl gold
+Ns 275.085968
+Ka 1.000000 1.000000 1.000000
+Kd 0.202114 0.108295 0.037341
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+
+newmtl lantern
+Ns 200.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 5.000000 2.122148 0.284152
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd textures/lamp.png
+
+newmtl lifeBoats
+Ns 200.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.027205 0.008953 0.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd textures/ExteriorWood_albedo.jpg
+map_bump -bm 1.000000 textures/WoodFlooringWorn010_NRM_3K.jpg
+
+newmtl metal
+Ns 200.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.018603 0.018603 0.018603
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd textures/metal.png
+
+newmtl metal.001
+Ns 200.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.018603 0.018603 0.018603
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd textures/metal.png
+
+newmtl pulley
+Ns 413.022339
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd textures/WoodMahoganyHonduranLarge001_COL_3K.jpg
+map_bump -bm 1.000000 textures/WoodMahoganyHonduranLarge001_NRM_3K.jpg
+
+newmtl pulley.001
+Ns 413.022339
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd textures/WoodMahoganyHonduranLarge001_COL_3K.jpg
+map_bump -bm 1.000000 textures/WoodMahoganyHonduranLarge001_NRM_3K.jpg
+
+newmtl ratLines
+Ns 200.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.068890 0.036650 0.016106
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd textures/Sartie_o.jpg
+
+newmtl redWood
+Ns 200.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd textures/WoodMahoganyHonduranLarge001_COL_3K.jpg
+map_bump -bm 1.000000 textures/WoodMahoganyHonduranLarge001_NRM_3K.jpg
+
+newmtl rope
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd textures/funie.png
+
+newmtl rope.001
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd textures/funie.png
+
+newmtl ropeBlack
+Ns 0.000000
+Ka 0.186364 0.186364 0.186364
+Kd 0.800000 0.800000 0.800000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 1
+map_Kd textures/funie.png
+
+newmtl ropeBlackCurve
+Ns 0.000000
+Ka 0.186364 0.186364 0.186364
+Kd 0.800000 0.800000 0.800000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 1
+map_Kd textures/funie.png
+
+newmtl ropeCurve
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd textures/funie.png
+
+newmtl spanker
+Ns 87.293365
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd textures/Velatura_randa_diff.jpg
+map_bump -bm 1.000000 textures/Velatura_randa_normal.jpg
+
+newmtl staySails
+Ns 87.293365
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd textures/Velatura_Stragli_diff.jpg
+map_bump -bm 1.000000 textures/Velatura_Stragli_normal.jpg
+
+newmtl structure
+Ns 200.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd textures/SidesWoodPlanks_albedo.jpg
+map_bump -bm 1.000000 textures/WoodFlooringWorn010_NRM_3K.jpg
+
+newmtl topSail
+Ns 87.293365
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd textures/Velatura_gabbia_diff.jpg
+
+newmtl topSailFore
+Ns 87.293365
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd textures/Velatura_parrocchetto_diff.jpg
+map_bump -bm 1.000000 textures/Velatura_parrocchetto_normal.jpg
+

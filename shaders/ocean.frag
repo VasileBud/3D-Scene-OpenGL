@@ -15,6 +15,12 @@ uniform mat3 normalMatrix;
 uniform vec3 lightDir;
 uniform vec3 lightColor;
 
+// fog
+uniform vec3 fogColor;
+uniform float fogDensity;
+uniform float fogStart;
+uniform float fogMinFactor;
+
 // textures
 uniform sampler2D diffuseTexture;
 uniform sampler2D specularTexture;
@@ -62,5 +68,14 @@ void main()
 
     vec3 color = ambient * albedo + diffuse * albedo + specular * specMap;
 
-    fColor = vec4(color, 1.0);
+    // eye-space dist for fog
+    vec3 fPosEye = (view * model * vec4(fPosition, 1.0)).xyz;
+    float dist = length(fPosEye);
+    float fogDist = max(dist - fogStart, 0.0);
+    float fogFactor = exp(-fogDensity * fogDensity * fogDist * fogDist);
+    fogFactor = clamp(fogFactor, fogMinFactor, 1.0);
+    fogFactor = clamp(fogFactor, 0.0, 1.0);
+
+    vec3 finalColor = mix(fogColor, color, fogFactor);
+    fColor = vec4(finalColor, 1.0);
 }

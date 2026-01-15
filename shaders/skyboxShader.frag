@@ -5,29 +5,37 @@ out vec4 color;
 
 uniform samplerCube skybox;
 
-// controle (le poti hardcoda sau seta din C++)
-uniform vec3 hazeColor;     // ex: vec3(0.02, 0.03, 0.08)
-uniform float hazeStrength; // ex: 0.6
-uniform float hazeHeight;   // ex: 0.15 (latimea benzii)
+// controle
+uniform vec3 hazeColor;
+uniform float hazeStrength;
+uniform float hazeHeight;
+uniform vec3 skyTint;
+uniform float skyTintStrength;
+uniform vec3 lightDir; // pentru variatie usoara spre luna
 
 void main()
 {
     vec3 dir = normalize(textureCoordinates);
-    vec3 sky = texture(skybox, dir).rgb;
 
-    // dir.y: +1 sus, 0 orizont, -1 jos
-    float y = dir.y;
+    // culoarea originala din cubemap
+    vec3 skyColor = texture(skybox, dir).rgb;
 
-    // banda la orizont: maxima pe y=0, scade spre sus/jos
-    float horizon = 1.0 - smoothstep(0.0, hazeHeight, abs(y));
+    // tint global aplicat inainte de haze
+    skyColor = mix(skyColor, skyTint, clamp(skyTintStrength, 0.0, 1.0));
 
-    // intuneca sus putin (noapte)
-    float topDark = smoothstep(0.0, 0.8, clamp(y, 0.0, 1.0));
+    // haze pe orizont bazat pe directia privirii
+    float horizon = clamp(1.0 - abs(dir.y), 0.0, 1.0); // 0 sus, 1 orizont
+    float haze = smoothstep(0.2, hazeHeight, horizon) * hazeStrength;
 
-    vec3 withHaze = mix(sky, hazeColor, horizon * hazeStrength);
+    // variatie dupa lumina (luna): mai “ars” spre lightDir
+    float lightFactor = max(dot(dir, normalize(lightDir)), 0.0);
+    haze *= mix(1.0, 0.7, lightFactor);
 
-    // optional: mai intunecat spre zenit
-    withHaze *= (1.0 - 0.35 * topDark);
+    skyColor = mix(skyColor, hazeColor, haze);
 
-    color = vec4(withHaze, 1.0);
+    // intunecare subtila spre zenit pentru adancime
+    float topDark = smoothstep(0.0, 0.8, clamp(dir.y, 0.0, 1.0));
+    skyColor *= (1.0 - 0.25 * topDark);
+
+    color = vec4(skyColor, 1.0);
 }

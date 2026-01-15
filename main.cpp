@@ -35,6 +35,16 @@ glm::mat4 oceanModel;
 glm::vec3 lightDir;
 glm::vec3 lightColor;
 
+// ship transform and derived lamp positions
+glm::mat4 shipModelMatrix;
+glm::vec3 lampWorld1;
+glm::vec3 lampWorld2;
+
+glm::vec3 fogColor(0.56f, 0.59f, 0.64f);
+float fogDensity = 0.00028f;
+float fogStart = 1200.0f;
+float fogMinFactor = 0.45f;
+
 // shader uniform locations
 GLint modelLoc;
 GLint viewLoc;
@@ -52,6 +62,10 @@ GLint oceanFrequencyLoc;
 GLint oceanSpeedLoc;
 GLint oceanLightDirLoc;
 GLint oceanLightColorLoc;
+GLint oceanFogColorLoc;
+GLint oceanFogDensityLoc;
+GLint oceanFogStartLoc;
+GLint oceanFogMinFactorLoc;
 GLint moonModelLoc;
 GLint moonNormalMatrixLoc;
 GLint shipModelLoc;
@@ -60,14 +74,28 @@ GLint shipProjectionLoc;
 GLint shipNormalMatrixLoc;
 GLint shipLightDirLoc;
 GLint shipLightColorLoc;
+GLint fogColorLoc;
+GLint fogDensityLoc;
+GLint fogStartLoc;
+GLint fogMinFactorLoc;
+
+glm::vec3 lampColor1(12.0f, 9.6f, 7.2f);
+glm::vec3 lampColor2(12.0f, 9.6f, 7.2f);
+
+glm::vec3 lampPos1(2.6f, 9.9f, -30.1f);
+glm::vec3 lampPos2(-2.6f, 9.9f, -30.1f);
+
+GLint lampPos1Loc, lampColor1Loc;
+GLint lampPos2Loc, lampColor2Loc;
 
 // camera
 gps::Camera myCamera(
-    glm::vec3(0.0f, 0.0f, 3.0f),
-    glm::vec3(0.0f, 0.0f, -10.0f),
+    // pornim camera direct pe corabie
+    glm::vec3(2000.0f, 80.0f, -4800.0f),
+    glm::vec3(2000.0f, 70.0f, -5000.0f),
     glm::vec3(0.0f, 1.0f, 0.0f));
 
-GLfloat cameraSpeed = 5.0f;
+GLfloat cameraSpeed = 50.0f;
 
 float oceanAmplitude = 0.2f;
 float oceanFrequency = 0.7f;
@@ -298,7 +326,7 @@ void setWindowCallbacks()
 
 void initOpenGLState()
 {
-    glClearColor(0.7f, 0.7f, 0.7f, 1.0f);
+    glClearColor(0.5, 0.5, 0.5, 1.0);
     glViewport(0, 0, myWindow.getWindowDimensions().width, myWindow.getWindowDimensions().height);
     glEnable(GL_FRAMEBUFFER_SRGB);
     glEnable(GL_DEPTH_TEST); // enable depth-testing
@@ -313,14 +341,12 @@ void initModels()
     teapot.LoadModel("models/teapot/teapot20segUT.obj");
     ocean.LoadModel("models/ocean/ocean.obj");
     moon.LoadModel("models/moon/moon.obj");
-    ship.LoadModel("models/ship/Golden_Galleon_0418173919_texture.obj");
+    ship.LoadModel("models/ship/ship_v1_03.obj");
 }
 
 void initShaders()
 {
-    myBasicShader.loadShader(
-        "shaders/basic.vert",
-        "shaders/basic.frag");
+    myBasicShader.loadShader("shaders/basic.vert","shaders/basic.frag");
     oceanShader.loadShader("shaders/ocean.vert", "shaders/ocean.frag");
     moonShader.loadShader("shaders/moon.vert", "shaders/moon.frag");
     skyboxShader.loadShader("shaders/skyboxShader.vert", "shaders/skyboxShader.frag");
@@ -367,12 +393,21 @@ void initUniforms()
     // send light color to shader
     glUniform3fv(lightColorLoc, 1, glm::value_ptr(lightColor));
 
+    fogColorLoc = glGetUniformLocation(myBasicShader.shaderProgram, "fogColor");
+    fogDensityLoc = glGetUniformLocation(myBasicShader.shaderProgram, "fogDensity");
+    fogMinFactorLoc = glGetUniformLocation(myBasicShader.shaderProgram, "fogMinFactor");
+    glUniform3fv(fogColorLoc, 1, glm::value_ptr(fogColor));
+    glUniform1f(fogDensityLoc, fogDensity);
+    fogStartLoc = glGetUniformLocation(myBasicShader.shaderProgram, "fogStart");
+    glUniform1f(fogMinFactorLoc, fogMinFactor);
+    glUniform1f(fogStartLoc, fogStart);
+
     oceanShader.useShaderProgram();
 
     // create model matrix for ocean
     oceanModel = glm::mat4(1.0f);
     oceanModel = glm::translate(oceanModel, glm::vec3(0.0f, -5.0f, -15.0f));
-    oceanModel = glm::scale(oceanModel, glm::vec3(10.0f));
+    oceanModel = glm::scale(oceanModel, glm::vec3(60.0f)); 
 
     // get uniform locations for ocean shader
     oceanModelLoc = glGetUniformLocation(oceanShader.shaderProgram, "model");
@@ -385,6 +420,10 @@ void initUniforms()
     oceanProjectionLoc = glGetUniformLocation(oceanShader.shaderProgram, "projection");
     oceanLightDirLoc = glGetUniformLocation(oceanShader.shaderProgram, "lightDir");
     oceanLightColorLoc = glGetUniformLocation(oceanShader.shaderProgram, "lightColor");
+    oceanFogColorLoc = glGetUniformLocation(oceanShader.shaderProgram, "fogColor");
+    oceanFogDensityLoc = glGetUniformLocation(oceanShader.shaderProgram, "fogDensity");
+    oceanFogStartLoc = glGetUniformLocation(oceanShader.shaderProgram, "fogStart");
+    oceanFogMinFactorLoc = glGetUniformLocation(oceanShader.shaderProgram, "fogMinFactor");
 
     // send view and projection matrices to ocean shader
     glUniformMatrix4fv(oceanViewLoc, 1, GL_FALSE, glm::value_ptr(view));
@@ -393,6 +432,10 @@ void initUniforms()
     // send light parameters to ocean shader
     glUniform3fv(oceanLightDirLoc, 1, glm::value_ptr(lightDir));
     glUniform3fv(oceanLightColorLoc, 1, glm::value_ptr(lightColor));
+    glUniform3fv(oceanFogColorLoc, 1, glm::value_ptr(fogColor));
+    glUniform1f(oceanFogDensityLoc, fogDensity);
+    glUniform1f(oceanFogStartLoc, fogStart);
+    glUniform1f(oceanFogMinFactorLoc, fogMinFactor);
 
     // send wave parameters to ocean shader
     glUniform1f(oceanAmplitudeLoc, oceanAmplitude);
@@ -404,13 +447,22 @@ void initUniforms()
     GLint hazeColorLoc = glGetUniformLocation(skyboxShader.shaderProgram, "hazeColor");
     GLint hazeStrLoc = glGetUniformLocation(skyboxShader.shaderProgram, "hazeStrength");
     GLint hazeHLoc = glGetUniformLocation(skyboxShader.shaderProgram, "hazeHeight");
+    GLint skyTintLoc = glGetUniformLocation(skyboxShader.shaderProgram, "skyTint");
+    GLint skyTintStrLoc = glGetUniformLocation(skyboxShader.shaderProgram, "skyTintStrength");
+    GLint skyLightDirLoc = glGetUniformLocation(skyboxShader.shaderProgram, "lightDir");
 
     if (hazeColorLoc != -1)
-        glUniform3f(hazeColorLoc,  0.003f, 0.006f, 0.015f);
+        glUniform3f(hazeColorLoc,  0.55f, 0.58f, 0.63f); // mai aproape de fog, mai multa ceata pe orizont
     if (hazeStrLoc != -1)
-        glUniform1f(hazeStrLoc, 0.75f);
+        glUniform1f(hazeStrLoc, 0.55f);
     if (hazeHLoc != -1)
-        glUniform1f(hazeHLoc, 1.5f);
+        glUniform1f(hazeHLoc, 0.65f);
+    if (skyTintLoc != -1)
+        glUniform3f(skyTintLoc,   0.003f, 0.006f, 0.015f);
+    if (skyTintStrLoc != -1)
+        glUniform1f(skyTintStrLoc, 0.75f);
+    if (skyLightDirLoc != -1)
+        glUniform3fv(skyLightDirLoc, 1, glm::value_ptr(lightDir));
 
     moonShader.useShaderProgram();
 
@@ -439,6 +491,25 @@ void initUniforms()
     shipNormalMatrixLoc = glGetUniformLocation(myBasicShader.shaderProgram, "normalMatrix");
     shipLightDirLoc = glGetUniformLocation(myBasicShader.shaderProgram, "lightDir");
     shipLightColorLoc = glGetUniformLocation(myBasicShader.shaderProgram, "lightColor");
+
+    lampPos1Loc   = glGetUniformLocation(myBasicShader.shaderProgram, "lampPos1");
+    lampColor1Loc = glGetUniformLocation(myBasicShader.shaderProgram, "lampColor1");
+
+    lampPos2Loc   = glGetUniformLocation(myBasicShader.shaderProgram, "lampPos2");
+    lampColor2Loc = glGetUniformLocation(myBasicShader.shaderProgram, "lampColor2");
+
+    // ship transform is static; precompute and send lamp positions/colors once
+    shipModelMatrix = glm::mat4(1.0f);
+    shipModelMatrix = glm::translate(shipModelMatrix, glm::vec3(10000.0f, 100.0f, -10000.0f));
+    shipModelMatrix = glm::scale(shipModelMatrix, glm::vec3(70.f));
+
+    lampWorld1 = glm::vec3(shipModelMatrix * glm::vec4(lampPos1, 1.0f));
+    lampWorld2 = glm::vec3(shipModelMatrix * glm::vec4(lampPos2, 1.0f));
+
+    glUniform3fv(lampPos1Loc, 1, glm::value_ptr(lampWorld1));
+    glUniform3fv(lampColor1Loc, 1, glm::value_ptr(lampColor1));
+    glUniform3fv(lampPos2Loc, 1, glm::value_ptr(lampWorld2));
+    glUniform3fv(lampColor2Loc, 1, glm::value_ptr(lampColor2));
 }
 
 void initSkybox()
@@ -473,15 +544,14 @@ void renderOcean(gps::Shader shader)
     // select active shader program
     shader.useShaderProgram();
 
-    // send ocean model matrix data to shader
+    // update time uniform for wave animation
+    glUniform1f(oceanTimeLoc, (float)glfwGetTime());
+
+    // single patch (foloseste oceanModel din initUniforms)
     glUniformMatrix4fv(oceanModelLoc, 1, GL_FALSE, glm::value_ptr(oceanModel));
 
-    // compute and send ocean normal matrix data to shader
     glm::mat3 oceanNormalMatrix = glm::mat3(glm::inverseTranspose(view * oceanModel));
     glUniformMatrix3fv(oceanNormalMatrixLoc, 1, GL_FALSE, glm::value_ptr(oceanNormalMatrix));
-
-    //update time uniform for wave animation
-    glUniform1f(oceanTimeLoc, (float)glfwGetTime());
 
     ocean.Draw(shader);
 }
@@ -493,7 +563,9 @@ void renderMoon(gps::Shader& shader)
     GLint viewLoc = glGetUniformLocation(shader.shaderProgram, "view");
     GLint projLoc = glGetUniformLocation(shader.shaderProgram, "projection");
 
-    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+    // fix moon on cer
+    glm::mat4 viewNoTranslate = glm::mat4(glm::mat3(view));
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(viewNoTranslate));
     glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
     moon.Draw(shader);
@@ -503,20 +575,15 @@ void renderShip(gps::Shader shader)
 {
     shader.useShaderProgram();
 
-    // Create ship model matrix
-    glm::mat4 shipModel = glm::mat4(1.0f);
-    shipModel = glm::translate(shipModel, glm::vec3(0.0f, 800.0f, -15.0f));
-    shipModel = glm::scale(shipModel, glm::vec3(1000.0f));
-
     // Send ship model matrix
-    glUniformMatrix4fv(shipModelLoc, 1, GL_FALSE, glm::value_ptr(shipModel));
+    glUniformMatrix4fv(shipModelLoc, 1, GL_FALSE, glm::value_ptr(shipModelMatrix));
 
     // Send view and projection matrices
     glUniformMatrix4fv(shipViewLoc, 1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(shipProjectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
     // Compute and send normal matrix
-    glm::mat3 shipNormalMatrix = glm::mat3(glm::inverseTranspose(view * shipModel));
+    glm::mat3 shipNormalMatrix = glm::mat3(glm::inverseTranspose(view * shipModelMatrix));
     glUniformMatrix3fv(shipNormalMatrixLoc, 1, GL_FALSE, glm::value_ptr(shipNormalMatrix));
 
     // Send light parameters
@@ -525,7 +592,6 @@ void renderShip(gps::Shader shader)
 
     ship.Draw(shader);
 }
-
 
 void renderScene()
 {
@@ -572,7 +638,6 @@ int main(int argc, const char* argv[])
     initUniforms();
     setWindowCallbacks();
 
-    glCheckError();
     // application loop
     while (!glfwWindowShouldClose(myWindow.getWindow()))
     {
@@ -582,10 +647,11 @@ int main(int argc, const char* argv[])
         glfwPollEvents();
         glfwSwapBuffers(myWindow.getWindow());
 
-        glCheckError();
     }
 
     cleanup();
 
     return EXIT_SUCCESS;
 }
+//spawnat in corabie sus pe ea
+//culoare corabie putin mai intunecata
