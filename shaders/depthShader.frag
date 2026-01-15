@@ -1,6 +1,8 @@
 #version 410 core
 
+out vec4 fColor;
+
 void main()
 {
-    // depth only, OpenGL writes to depth buffer automatically
+    fColor = vec4(1.0f);
 }

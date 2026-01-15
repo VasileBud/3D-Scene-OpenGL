@@ -3,6 +3,7 @@
 in vec3 fPosition;
 in vec3 fNormal;
 in vec2 fTexCoords;
+in vec4 fragPosLightSpace;
 
 out vec4 fColor;
 
@@ -24,6 +25,7 @@ uniform float fogMinFactor;
 // textures
 uniform sampler2D diffuseTexture;
 uniform sampler2D specularTexture;
+uniform sampler2D shadowMap;
 
 // components
 vec3 ambient;
@@ -59,6 +61,39 @@ void computeDirLight()
     specular = specularStrength * spec * lightColor;
 }
 
+float computeShadow()
+{
+    // perform perspective divide
+    vec3 normalizedCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+    // transform to [0,1] range
+    normalizedCoords = normalizedCoords * 0.5 + 0.5;
+
+    if (normalizedCoords.z > 1.0f)
+    {
+        return 0.0f;
+    }
+
+    vec3 normalEye = normalize(normalMatrix * fNormal);
+    vec3 lightDirEye = normalize(vec3(view * vec4(lightDir, 0.0)));
+    float bias = max(0.05f * (1.0f - dot(normalEye, lightDirEye)), 0.005f);
+
+    float currentDepth = normalizedCoords.z;
+    vec2 texelSize = 1.0 / vec2(textureSize(shadowMap, 0));
+    float shadow = 0.0;
+
+    for (int x = -1; x <= 1; ++x)
+    {
+        for (int y = -1; y <= 1; ++y)
+        {
+            float closestDepth = texture(shadowMap, normalizedCoords.xy + vec2(x, y) * texelSize).r;
+            shadow += currentDepth - bias > closestDepth ? 1.0f : 0.0f;
+        }
+    }
+
+    shadow /= 9.0f;
+    return shadow;
+}
+
 void main()
 {
     computeDirLight();
@@ -66,7 +101,9 @@ void main()
     vec3 albedo = texture(diffuseTexture,  fTexCoords).rgb;
     vec3 specMap = texture(specularTexture, fTexCoords).rgb;
 
-    vec3 color = ambient * albedo + diffuse * albedo + specular * specMap;
+    float shadow = computeShadow();
+    vec3 color = ambient * albedo + (1.0f - shadow) * diffuse * albedo +
+                 (1.0f - shadow) * specular * specMap;
 
     // eye-space dist for fog
     vec3 fPosEye = (view * model * vec4(fPosition, 1.0)).xyz;

@@ -78,6 +78,10 @@ GLint fogColorLoc;
 GLint fogDensityLoc;
 GLint fogStartLoc;
 GLint fogMinFactorLoc;
+GLint lightSpaceTrMatrixLoc;
+GLint shadowMapLoc;
+GLint oceanLightSpaceTrMatrixLoc;
+GLint oceanShadowMapLoc;
 
 glm::vec3 lampColor1(12.0f, 9.6f, 7.2f);
 glm::vec3 lampColor2(12.0f, 9.6f, 7.2f);
@@ -113,6 +117,12 @@ GLboolean pressedKeys[1024];
 enum RenderMode { RENDER_SOLID = 0, RENDER_WIREFRAME, RENDER_POLYGONAL, RENDER_SMOOTH };
 RenderMode currentRenderMode = RENDER_SOLID;
 
+const GLuint SHADOW_WIDTH = 2048*4;
+const GLuint SHADOW_HEIGHT = 2048*4;
+GLuint shadowMapFBO;
+GLuint depthMapTexture;
+glm::mat4 lightSpaceTrMatrix;
+
 // models
 gps::Model3D teapot;
 gps::Model3D ocean;
@@ -127,6 +137,7 @@ gps::Shader myBasicShader;
 gps::Shader oceanShader;
 gps::Shader skyboxShader;
 gps::Shader moonShader;
+gps::Shader depthShader;
 
 GLenum glCheckError_(const char* file, int line)
 {
@@ -197,6 +208,41 @@ void applyRenderMode()
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         break;
     }
+}
+
+glm::mat4 computeLightSpaceTrMatrix()
+{
+    const glm::vec3 sceneCenter = myCamera.getPosition();
+    const GLfloat lightDistance = 10000.0f;
+    glm::vec3 lightPos = sceneCenter + lightDir * lightDistance;
+    glm::mat4 lightView = glm::lookAt(lightPos, sceneCenter, glm::vec3(0.0f, 1.0f, 0.0f));
+    const GLfloat near_plane = 1.0f, far_plane = 20000.0f;
+    const GLfloat ortho_size = 8000.0f;
+    glm::mat4 lightProjection = glm::ortho(-ortho_size, ortho_size, -ortho_size, ortho_size,
+                                           near_plane, far_plane);
+    return lightProjection * lightView;
+}
+
+void initShadowMap()
+{
+    glGenFramebuffers(1, &shadowMapFBO);
+
+    glGenTextures(1, &depthMapTexture);
+    glBindTexture(GL_TEXTURE_2D, depthMapTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
+                 SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMapTexture, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void windowResizeCallback(GLFWwindow* window, int width, int height)
@@ -407,6 +453,7 @@ void initShaders()
     oceanShader.loadShader("shaders/ocean.vert", "shaders/ocean.frag");
     moonShader.loadShader("shaders/moon.vert", "shaders/moon.frag");
     skyboxShader.loadShader("shaders/skyboxShader.vert", "shaders/skyboxShader.frag");
+    depthShader.loadShader("shaders/depthShader.vert", "shaders/depthShader.frag");
     skyboxShader.useShaderProgram();
 }
 
@@ -567,6 +614,15 @@ void initUniforms()
     glUniform3fv(lampColor1Loc, 1, glm::value_ptr(lampColor1));
     glUniform3fv(lampPos2Loc, 1, glm::value_ptr(lampWorld2));
     glUniform3fv(lampColor2Loc, 1, glm::value_ptr(lampColor2));
+
+    lightSpaceTrMatrixLoc = glGetUniformLocation(myBasicShader.shaderProgram, "lightSpaceTrMatrix");
+    shadowMapLoc = glGetUniformLocation(myBasicShader.shaderProgram, "shadowMap");
+    glUniform1i(shadowMapLoc, 5);
+
+    oceanShader.useShaderProgram();
+    oceanLightSpaceTrMatrixLoc = glGetUniformLocation(oceanShader.shaderProgram, "lightSpaceTrMatrix");
+    oceanShadowMapLoc = glGetUniformLocation(oceanShader.shaderProgram, "shadowMap");
+    glUniform1i(oceanShadowMapLoc, 5);
 }
 
 void initSkybox()
@@ -628,6 +684,18 @@ void renderMoon(gps::Shader& shader)
     moon.Draw(shader);
 }
 
+void renderSceneDepth()
+{
+    depthShader.useShaderProgram();
+    GLint modelLoc = glGetUniformLocation(depthShader.shaderProgram, "model");
+
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(oceanModel));
+    ocean.Draw(depthShader);
+
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(shipModelMatrix));
+    ship.Draw(depthShader);
+}
+
 void renderShip(gps::Shader shader)
 {
     shader.useShaderProgram();
@@ -652,13 +720,34 @@ void renderShip(gps::Shader shader)
 
 void renderScene()
 {
+    lightSpaceTrMatrix = computeLightSpaceTrMatrix();
+
+    // render to depth map
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    depthShader.useShaderProgram();
+    glUniformMatrix4fv(glGetUniformLocation(depthShader.shaderProgram, "lightSpaceTrMatrix"),
+                       1, GL_FALSE, glm::value_ptr(lightSpaceTrMatrix));
+    glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+    glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFBO);
+    glClear(GL_DEPTH_BUFFER_BIT);
+    renderSceneDepth();
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    applyRenderMode();
+
+    // render the scene
+    glViewport(0, 0, myWindow.getWindowDimensions().width, myWindow.getWindowDimensions().height);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    //render the scene
-    renderOcean(oceanShader);
+    glActiveTexture(GL_TEXTURE5);
+    glBindTexture(GL_TEXTURE_2D, depthMapTexture);
 
-    // render the teapot
-    //renderTeapot(myBasicShader);
+    myBasicShader.useShaderProgram();
+    glUniformMatrix4fv(lightSpaceTrMatrixLoc, 1, GL_FALSE, glm::value_ptr(lightSpaceTrMatrix));
+
+    oceanShader.useShaderProgram();
+    glUniformMatrix4fv(oceanLightSpaceTrMatrixLoc, 1, GL_FALSE, glm::value_ptr(lightSpaceTrMatrix));
+
+    renderOcean(oceanShader);
 
     // render the ship
     renderShip(myBasicShader);
@@ -672,6 +761,8 @@ void renderScene()
 
 void cleanup()
 {
+    glDeleteFramebuffers(1, &shadowMapFBO);
+    glDeleteTextures(1, &depthMapTexture);
     myWindow.Delete();
     //cleanup code for your own data
 }
@@ -689,6 +780,7 @@ int main(int argc, const char* argv[])
     }
 
     initOpenGLState();
+    initShadowMap();
     initModels();
     initShaders();
     initSkybox();
@@ -710,5 +802,4 @@ int main(int argc, const char* argv[])
 
     return EXIT_SUCCESS;
 }
-//spawnat in corabie sus pe ea
 //culoare corabie putin mai intunecata

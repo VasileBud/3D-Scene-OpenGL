@@ -7,11 +7,13 @@ layout(location = 2) in vec2 vTexCoords;
 out vec3 fPosition;
 out vec3 fNormal;
 out vec2 fTexCoords;
+out vec4 fragPosLightSpace;
 
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 uniform mat3 normalMatrix;
+uniform mat4 lightSpaceTrMatrix;
 
 uniform float time;
 
@@ -57,5 +59,6 @@ void main()
     fTexCoords = vTexCoords;
 
     gl_Position = projection * view * model * vec4(pos, 1.0);
+    fragPosLightSpace = lightSpaceTrMatrix * model * vec4(pos, 1.0);
 }
 
