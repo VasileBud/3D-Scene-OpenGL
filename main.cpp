@@ -20,6 +20,7 @@
 #include "SkyBox.hpp"
 
 #include <iostream>
+#include <array>
 
 // window
 gps::Window myWindow;
@@ -39,11 +40,14 @@ glm::vec3 lightColor;
 glm::mat4 shipModelMatrix;
 glm::vec3 lampWorld1;
 glm::vec3 lampWorld2;
+float shipYaw = 0.0f;
 
 glm::vec3 fogColor(0.56f, 0.59f, 0.64f);
 float fogDensity = 0.00028f;
 float fogStart = 1200.0f;
 float fogMinFactor = 0.45f;
+const float oceanSurfaceY = -5.0f;
+const float introMinOceanClearance = 60.0f;
 
 // shader uniform locations
 GLint modelLoc;
@@ -98,15 +102,30 @@ const glm::vec3 shipSpawnLocal = 0.5f * (lampPos1 + lampPos2);
 const glm::vec3 shipLookLocal = shipSpawnLocal + glm::vec3(-20.0f, 0.0f, -10.0f);
 const glm::vec3 shipSpawnWorld = shipWorldTranslation + shipWorldScale * shipSpawnLocal;
 const glm::vec3 shipLookWorld = shipWorldTranslation + shipWorldScale * shipLookLocal;
+const glm::vec3 introStartPos(0.0f, 6500.0f, 9500.0f);
+const glm::vec3 introStartTarget(0.0f, 0.0f, 0.0f);
 
 // camera
 gps::Camera myCamera(
-    // pornim camera direct pe corabie
-    shipSpawnWorld,
-    shipLookWorld,
+    introStartPos,
+    introStartTarget,
     glm::vec3(0.0f, 1.0f, 0.0f));
 
-GLfloat cameraSpeed = 50.0f;
+GLfloat cameraSpeed = 35.0f;
+
+struct IntroKeyframe
+{
+    float t;
+    glm::vec3 position;
+    glm::vec3 target;
+};
+
+const float introDuration = 22.0f;
+float introStartTime = 0.0f;
+bool introActive = true;
+bool resetMouseState = false;
+std::array<IntroKeyframe, 9> introKeyframes;
+glm::vec3 shipIntroSpawnWorld = shipSpawnWorld;
 
 float oceanAmplitude = 0.2f;
 float oceanFrequency = 0.7f;
@@ -225,6 +244,144 @@ void updateViewUniforms()
     glUniformMatrix4fv(oceanViewLoc, 1, GL_FALSE, glm::value_ptr(view));
 }
 
+void updateShipTransform()
+{
+    shipModelMatrix = glm::mat4(1.0f);
+    shipModelMatrix = glm::translate(shipModelMatrix, shipWorldTranslation);
+    shipModelMatrix = glm::rotate(shipModelMatrix, glm::radians(shipYaw), glm::vec3(0.0f, 1.0f, 0.0f));
+    shipModelMatrix = glm::scale(shipModelMatrix, glm::vec3(shipWorldScale));
+
+    lampWorld1 = glm::vec3(shipModelMatrix * glm::vec4(lampPos1, 1.0f));
+    lampWorld2 = glm::vec3(shipModelMatrix * glm::vec4(lampPos2, 1.0f));
+}
+
+glm::vec3 catmullRom(const glm::vec3& p0,
+                     const glm::vec3& p1,
+                     const glm::vec3& p2,
+                     const glm::vec3& p3,
+                     float t)
+{
+    float t2 = t * t;
+    float t3 = t2 * t;
+    return 0.5f * ((2.0f * p1) +
+                   (-p0 + p2) * t +
+                   (2.0f * p0 - 5.0f * p1 + 4.0f * p2 - p3) * t2 +
+                   (-p0 + 3.0f * p1 - 3.0f * p2 + p3) * t3);
+}
+
+void setCameraLookAt(const glm::vec3& position, const glm::vec3& target)
+{
+    glm::vec3 dir = glm::normalize(target - position);
+    float yaw = glm::degrees(atan2(dir.z, dir.x));
+    float pitch = glm::degrees(asin(glm::clamp(dir.y, -1.0f, 1.0f)));
+    myCamera.setPosition(position);
+    myCamera.rotate(yaw, pitch);
+}
+
+void initIntroAnimation()
+{
+    const glm::vec3 wideTarget(0.0f, 0.0f, 0.0f);
+    const glm::vec3 oceanTarget(0.0f, 0.0f, -15.0f);
+    const glm::vec3 oceanHoverPos(0.0f, 140.0f, 500.0f);
+    introKeyframes[0] = { 0.0f, introStartPos, wideTarget };
+    introKeyframes[1] = { 2.5f, glm::vec3(0.0f, 2200.0f, 3500.0f), oceanTarget };
+    introKeyframes[2] = { 4.5f, oceanHoverPos, oceanTarget };
+    introKeyframes[3] = { 5.5f, oceanHoverPos, oceanTarget };
+
+    glm::vec3 shipCenter = shipWorldTranslation + glm::vec3(0.0f, 300.0f, 0.0f);
+    const float orbitRadius = 3500.0f;
+    const float orbitHeight = 1500.0f;
+
+    introKeyframes[4] = { 10.5f, shipWorldTranslation + glm::vec3(-6000.0f, 2200.0f, 2000.0f), shipCenter };
+    introKeyframes[5] = { 14.0f, shipCenter + glm::vec3(orbitRadius, orbitHeight, 0.0f), shipCenter };
+    introKeyframes[6] = { 17.0f, shipCenter + glm::vec3(0.0f, orbitHeight + 200.0f, orbitRadius), shipCenter };
+    introKeyframes[7] = { 20.0f, shipCenter + glm::vec3(-orbitRadius, orbitHeight, 0.0f), shipCenter };
+
+    introKeyframes[8] = { introDuration, shipIntroSpawnWorld, shipLookWorld };
+}
+
+void updateIntroCamera()
+{
+    if (!introActive)
+    {
+        shipYaw = 0.0f;
+        return;
+    }
+
+    float elapsed = static_cast<float>(glfwGetTime()) - introStartTime;
+    if (elapsed >= introDuration)
+    {
+        introActive = false;
+        shipYaw = 0.0f;
+        setCameraLookAt(shipIntroSpawnWorld, shipLookWorld);
+        updateViewUniforms();
+        resetMouseState = true;
+        return;
+    }
+
+    float normalized = glm::clamp(elapsed / introDuration, 0.0f, 1.0f);
+    shipYaw = 360.0f * normalized;
+
+    float oceanHoldStart = introKeyframes[2].t;
+    float oceanHoldEnd = introKeyframes[3].t;
+    if (elapsed >= oceanHoldStart && elapsed <= oceanHoldEnd)
+    {
+        glm::vec3 pos = introKeyframes[2].position;
+        glm::vec3 target = introKeyframes[2].target;
+        float minY = oceanSurfaceY + introMinOceanClearance;
+        if (pos.y < minY)
+        {
+            pos.y = minY;
+        }
+        if (target.y < oceanSurfaceY + 2.0f)
+        {
+            target.y = oceanSurfaceY + 2.0f;
+        }
+        setCameraLookAt(pos, target);
+        updateViewUniforms();
+        return;
+    }
+
+    size_t idx = 0;
+    while (idx + 1 < introKeyframes.size() && elapsed > introKeyframes[idx + 1].t)
+    {
+        ++idx;
+    }
+
+    const IntroKeyframe& a = introKeyframes[idx];
+    const IntroKeyframe& b = introKeyframes[idx + 1];
+    float t = (elapsed - a.t) / (b.t - a.t);
+    t = glm::clamp(t, 0.0f, 1.0f);
+    float s = t * t * (3.0f - 2.0f * t);
+
+    size_t i0 = (idx == 0) ? idx : idx - 1;
+    size_t i1 = idx;
+    size_t i2 = idx + 1;
+    size_t i3 = (idx + 2 < introKeyframes.size()) ? idx + 2 : idx + 1;
+
+    glm::vec3 pos = catmullRom(introKeyframes[i0].position,
+                               introKeyframes[i1].position,
+                               introKeyframes[i2].position,
+                               introKeyframes[i3].position,
+                               s);
+    glm::vec3 target = catmullRom(introKeyframes[i0].target,
+                                  introKeyframes[i1].target,
+                                  introKeyframes[i2].target,
+                                  introKeyframes[i3].target,
+                                  s);
+    float minY = oceanSurfaceY + introMinOceanClearance;
+    if (pos.y < minY)
+    {
+        pos.y = minY;
+    }
+    if (target.y < oceanSurfaceY + 2.0f)
+    {
+        target.y = oceanSurfaceY + 2.0f;
+    }
+    setCameraLookAt(pos, target);
+    updateViewUniforms();
+}
+
 glm::vec3 findFreeSpawnLocal()
 {
     glm::vec3 minB = shipBoundsLocal.min + glm::vec3(shipWalkMargin, 0.0f, shipWalkMargin);
@@ -286,8 +443,9 @@ void placeCameraOnShip()
 {
     glm::vec3 localPos = findFreeSpawnLocal();
     glm::vec3 worldPos = glm::vec3(shipModelMatrix * glm::vec4(localPos, 1.0f));
-    myCamera.setPosition(worldPos);
+    setCameraLookAt(worldPos, shipLookWorld);
     updateViewUniforms();
+    resetMouseState = true;
 }
 
 void clampCameraToShip(const glm::vec3& prevWorldPos)
@@ -400,6 +558,18 @@ void mouseCallback(GLFWwindow* window, double xpos, double ypos)
     static float cameraYaw = 0.0f;
     static float cameraPitch = 0.0f;
 
+    if (resetMouseState)
+    {
+        initializedAngles = false;
+        firstMouse = true;
+        resetMouseState = false;
+    }
+
+    if (introActive)
+    {
+        return;
+    }
+
     if (!initializedAngles)
     {
         glm::vec3 initialFrontDirection = myCamera.getCameraFrontDirection();
@@ -435,6 +605,11 @@ void mouseCallback(GLFWwindow* window, double xpos, double ypos)
 
 void processMovement()
 {
+    if (introActive)
+    {
+        return;
+    }
+
     bool moved = false;
     glm::vec3 prevPos = myCamera.getPosition();
     if (pressedKeys[GLFW_KEY_W])
@@ -533,6 +708,9 @@ void initModels()
     {
         shipEyeHeightLocal = 1.7f;
     }
+
+    glm::vec3 introLocal = findFreeSpawnLocal();
+    shipIntroSpawnWorld = shipWorldTranslation + shipWorldScale * introLocal;
 }
 
 void initShaders()
@@ -690,13 +868,8 @@ void initUniforms()
     lampPos2Loc   = glGetUniformLocation(myBasicShader.shaderProgram, "lampPos2");
     lampColor2Loc = glGetUniformLocation(myBasicShader.shaderProgram, "lampColor2");
 
-    // ship transform is static; precompute and send lamp positions/colors once
-    shipModelMatrix = glm::mat4(1.0f);
-    shipModelMatrix = glm::translate(shipModelMatrix, shipWorldTranslation);
-    shipModelMatrix = glm::scale(shipModelMatrix, glm::vec3(shipWorldScale));
-
-    lampWorld1 = glm::vec3(shipModelMatrix * glm::vec4(lampPos1, 1.0f));
-    lampWorld2 = glm::vec3(shipModelMatrix * glm::vec4(lampPos2, 1.0f));
+    // initialize ship transform and lamp positions/colors
+    updateShipTransform();
 
     glUniform3fv(lampPos1Loc, 1, glm::value_ptr(lampWorld1));
     glUniform3fv(lampColor1Loc, 1, glm::value_ptr(lampColor1));
@@ -788,6 +961,11 @@ void renderShip(gps::Shader shader)
 {
     shader.useShaderProgram();
 
+    glUniform3fv(lampPos1Loc, 1, glm::value_ptr(lampWorld1));
+    glUniform3fv(lampColor1Loc, 1, glm::value_ptr(lampColor1));
+    glUniform3fv(lampPos2Loc, 1, glm::value_ptr(lampWorld2));
+    glUniform3fv(lampColor2Loc, 1, glm::value_ptr(lampColor2));
+
     // Send ship model matrix
     glUniformMatrix4fv(shipModelLoc, 1, GL_FALSE, glm::value_ptr(shipModelMatrix));
 
@@ -809,6 +987,7 @@ void renderShip(gps::Shader shader)
 void renderScene()
 {
     lightSpaceTrMatrix = computeLightSpaceTrMatrix();
+    updateShipTransform();
 
     // render to depth map
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -870,15 +1049,17 @@ int main(int argc, const char* argv[])
     initOpenGLState();
     initShadowMap();
     initModels();
+    initIntroAnimation();
     initShaders();
     initSkybox();
     initUniforms();
-    placeCameraOnShip();
     setWindowCallbacks();
+    introStartTime = static_cast<float>(glfwGetTime());
 
     // application loop
     while (!glfwWindowShouldClose(myWindow.getWindow()))
     {
+        updateIntroCamera();
         processMovement();
         renderScene();
 
@@ -891,4 +1072,3 @@ int main(int argc, const char* argv[])
 
     return EXIT_SUCCESS;
 }
-//culoare corabie putin mai intunecata
