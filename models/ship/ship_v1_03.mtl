@@ -260,6 +260,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 3
+map_Kd textures/metal.png
 
 newmtl lantern
 Ns 200.000000

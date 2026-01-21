@@ -88,7 +88,6 @@ const float introDuration = 13.0f;
 float introStartTime = 0.0f;
 bool introActive = true;
 bool resetMouseState = false;
-std::array<IntroKeyframe, 9> introKeyframes;
 glm::vec3 shipIntroSpawnWorld(0.0f);
 bool collisionsEnabled = true;
 
@@ -714,8 +713,8 @@ void initObjectPositions()
 
     shipIntroSpawnWorld = shipWorldTranslation + shipWorldScale * shipSpawnLocal;
 
-    const glm::vec3 teapotLocal(-2.2f, 6.0f, -10.4f);
-    const glm::vec3 nanosuitLocal(3.2f, 5.5f, -6.8f);
+    const glm::vec3 teapotLocal(-0.4f, 6.0f, -10.4f);
+    const glm::vec3 nanosuitLocal(0.7f, 6.2f, -10.4f);
     const glm::vec3 chestLocal(0.2f, 6.0f, -10.4f);
 
     teapotWorldPos = shipWorldTranslation + shipWorldScale * teapotLocal;
@@ -910,8 +909,8 @@ void renderSceneDepth()
     teapot.Draw(depthShader);
 
     glm::mat4 nanosuitMatrix = (heldItem == HELD_NANOSUIT)
-        ? buildHeldMatrix(0.22f, glm::vec3(90.0f, 0.0f, 0.0f))
-        : buildWorldMatrix(nanosuitWorldPos, 0.22f, glm::vec3(90.0f, 180.0f, 0.0f));
+        ? buildHeldMatrix(0.22f, glm::vec3(0.0f, 180.0f, 0.0f))
+        : buildWorldMatrix(nanosuitWorldPos, 0.22f, glm::vec3(0.0f, 180.0f, 0.0f));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(nanosuitMatrix));
     nanosuit.Draw(depthShader);
 
@@ -960,8 +959,8 @@ void renderTeapot(gps::Shader& shader)
 void renderNanosuit(gps::Shader& shader)
 {
     glm::mat4 nanosuitMatrix = (heldItem == HELD_NANOSUIT)
-                                   ? buildHeldMatrix(0.22f, glm::vec3(90.0f, 0.0f, 0.0f))
-                                   : buildWorldMatrix(nanosuitWorldPos, 0.22f, glm::vec3(90.0f, 180.0f, 0.0f));
+                                   ? buildHeldMatrix(0.22f, glm::vec3(0.0f, 180.0f, 0.0f))
+                                   : buildWorldMatrix(nanosuitWorldPos, 0.22f, glm::vec3(0.0f, 180.0f, 0.0f));
     shader.useShaderProgram();
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(nanosuitMatrix));
     glm::mat3 objectNormalMatrix = glm::mat3(glm::inverseTranspose(view * nanosuitMatrix));

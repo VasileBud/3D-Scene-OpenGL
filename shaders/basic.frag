@@ -85,10 +85,9 @@ float computeShadow(vec3 normalEye)
 float computeFog(vec3 fPosEye)
 {
     float fogDensity = 0.00020f;
-    float fogStart = 1200.0f;
     float fogMinFactor = 0.45f;
     float fragmentDistance = length(fPosEye);
-    float fogDistance = max(fragmentDistance - fogStart, 0.0);
+    float fogDistance = max(fragmentDistance, 0.0);
     float fogFactor = exp(-fogDensity * fogDensity * fogDistance * fogDistance);
     fogFactor = clamp(fogFactor, fogMinFactor, 1.0);
     return clamp(fogFactor, 0.0, 1.0);
