@@ -6,10 +6,8 @@ in vec2 fTexCoords;
 
 out vec4 fColor;
 
-// textura difuză (Model3D o leagă automat pe uniform-ul ăsta)
 uniform sampler2D diffuseTexture;
 
-// opțional: ca să poți regla ușor intensitatea / culoarea lunii
 uniform vec3 moonColor = vec3(1.0);
 
 void main()

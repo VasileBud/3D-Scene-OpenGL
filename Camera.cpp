@@ -11,7 +11,6 @@ namespace gps {
         this->cameraRightDirection = glm::normalize(glm::cross(cameraFrontDirection, cameraUpDirection));
     }
 
-    // Return the view matrix, using the glm::lookAt() function
     glm::mat4 Camera::getViewMatrix() {
         return glm::lookAt(cameraPosition, cameraPosition + cameraFrontDirection, cameraUpDirection);
     }
